@@ -1,0 +1,445 @@
+openapi: 3.0.3
+info:
+  title: Fitness AI Assistant API
+  version: 1.0.0
+  description: Учебный контракт модульного монолита. Анализ техники представлен приёмом результата анализа; алгоритм
+    CV не описывается.
+servers:
+- url: https://api.example.invalid/v1
+  description: 'Заглушка: адрес заменить после развёртывания'
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Profile
+      summary: Войти по email и паролю
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /profile/me:
+    get:
+      tags:
+      - Profile
+      summary: Получить свой профиль
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      security:
+      - bearerAuth: []
+  /workouts:
+    get:
+      tags:
+      - Catalog
+      summary: Найти тренировки по критериям
+      responses:
+        '200':
+          description: Список тренировок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workout'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      parameters:
+      - name: difficulty
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - beginner
+          - intermediate
+          - advanced
+      - name: equipment
+        in: query
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+  /plans:
+    post:
+      tags:
+      - PersonalPlan
+      summary: Создать персональный план
+      responses:
+        '201':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      security:
+      - bearerAuth: []
+  /plans/{planId}:
+    get:
+      tags:
+      - PersonalPlan
+      summary: Получить персональный план
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      parameters:
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      security:
+      - bearerAuth: []
+  /sessions:
+    post:
+      tags:
+      - TrainingSession
+      summary: Начать тренировочную сессию
+      responses:
+        '201':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionRequest'
+      security:
+      - bearerAuth: []
+  /sessions/{sessionId}/technique:
+    post:
+      tags:
+      - TrainingSession
+      summary: Записать результат анализа техники
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechniqueEvaluation'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TechniqueEvaluation'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      security:
+      - bearerAuth: []
+  /sessions/{sessionId}/complete:
+    post:
+      tags:
+      - TrainingSession
+      summary: Завершить тренировку (идемпотентно)
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      security:
+      - bearerAuth: []
+      description: Повторный вызов возвращает уже завершённую сессию без повторного события WorkoutCompleted.
+  /nutrition/plan:
+    get:
+      tags:
+      - Nutrition
+      summary: Получить рекомендации по питанию
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionPlan'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Требуется авторизация
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    TokenPair:
+      type: object
+      required:
+      - accessToken
+      - refreshToken
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    Profile:
+      type: object
+      required:
+      - id
+      - goal
+      - level
+      properties:
+        id:
+          type: string
+          format: uuid
+        goal:
+          type: string
+          enum:
+          - strength
+          - weight_loss
+          - wellness
+        level:
+          type: string
+          enum:
+          - beginner
+          - intermediate
+          - advanced
+        restrictions:
+          type: array
+          items:
+            type: string
+    Workout:
+      type: object
+      required:
+      - id
+      - title
+      - difficulty
+      - equipment
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        difficulty:
+          type: string
+          enum:
+          - beginner
+          - intermediate
+          - advanced
+        equipment:
+          type: array
+          items:
+            type: string
+    Plan:
+      type: object
+      required:
+      - id
+      - userId
+      - workoutIds
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        workoutIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        progressPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+    CreatePlanRequest:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date
+    Session:
+      type: object
+      required:
+      - id
+      - workoutId
+      - state
+      properties:
+        id:
+          type: string
+          format: uuid
+        workoutId:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+          - active
+          - completed
+          - abandoned
+    StartSessionRequest:
+      type: object
+      required:
+      - workoutId
+      properties:
+        workoutId:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+    TechniqueEvaluation:
+      type: object
+      required:
+      - exerciseId
+      - score
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        issue:
+          type: string
+        hint:
+          type: string
+    NutritionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        recommendation:
+          type: string
